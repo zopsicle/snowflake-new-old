@@ -5,23 +5,45 @@ use Snowflake::Config;
 use Snowflake::Hash qw(build_hash output_hash sources_hash);
 use Snowflake::Rule;
 
-my $config = Snowflake::Config->new(stash_path => 'build');
-
-my $rule1 = Snowflake::Rule->new(
-    'Rule 1',
+my $compile_hello = Snowflake::Rule->new(
+    'Compile hello.c',
     [],
     {
-        'snowflake-build' => ['inline', "#!/bin/sh\ntac default.nix | tee snowflake-output"],
-        'default.nix' => ['on_disk', 'default.nix'],
+        'snowflake-build' => ['inline', "#!/usr/bin/env bash\n". <<'BASH'],
+            set -o errexit
+            mkdir snowflake-output
+            gcc -o snowflake-output/hello.o -c hello.c
+BASH
+        'hello.h' => ['on_disk', 'example/hello.h'],
+        'hello.c' => ['on_disk', 'example/hello.c'],
     },
 );
 
-my $rule2 = Snowflake::Rule->new(
-    'Rule 2',
-    [$rule1],
+my $compile_main = Snowflake::Rule->new(
+    'Compile main.c',
+    [],
     {
-        'snowflake-build' => ['inline', "#!/usr/bin/env bash\ncat \"\$\@\"\ntouch snowflake-output"],
+        'snowflake-build' => ['inline', "#!/usr/bin/env bash\n" . <<'BASH'],
+            set -o errexit
+            mkdir snowflake-output
+            gcc -o snowflake-output/main.o -c main.c
+BASH
+        'hello.h' => ['on_disk', 'example/hello.h'],
+        'main.c' => ['on_disk', 'example/main.c'],
     },
 );
 
-$rule2->get_output_hash($config);
+my $link = Snowflake::Rule->new(
+    'Link',
+    [$compile_hello, $compile_main],
+    {
+        'snowflake-build' => ['inline', "#!/usr/bin/env bash\n" . <<'BASH'],
+            set -o errexit
+            mkdir snowflake-output
+            gcc -o snowflake-output/hello $1/hello.o $2/main.o
+BASH
+    },
+);
+
+my $config = Snowflake::Config->new(stash_path => 'build');
+$link->get_output_hash($config);

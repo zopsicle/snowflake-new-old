@@ -115,7 +115,8 @@ sub build
     my ($self, $config) = @_;
 
     # Extract configuration and inputs.
-    my $rsync_path   = $ENV{SNOWFLAKE_RSYNC_PATH};
+    my $cp_path      = $ENV{SNOWFLAKE_CP_PATH};
+    my @cp_flags     = ('--no-target-directory', '--recursive');
     my $name         = $self->{name};
     my $build_hash   = $self->get_build_hash($config);
     my @dependencies = $self->{dependencies}->@*;
@@ -155,8 +156,9 @@ sub build
             print $file $source or confess($!);
             chmod(0755, $path) if ($name eq 'snowflake-build');
         } elsif ($type eq 'on_disk') {
-            system($rsync_path, '--archive', '--relative', $source, $path)
-                and croak('rsync');
+            mkpath(dirname($path));
+            system($cp_path, @cp_flags, $source, $path)
+                and croak('cp');
         } else {
             croak("Bad source type: $type");
         }
@@ -182,8 +184,8 @@ BASH
     my $output_hash = output_hash($scratch_output_path);
     my $output_path = $config->output_path($output_hash);
     mkpath(dirname($output_path));
-    system($rsync_path, '--archive', $scratch_output_path, $output_path)
-        and croak('rsync');
+    system($cp_path, @cp_flags, $scratch_output_path, $output_path)
+        and croak('cp');
 
     # Add cache entry.
     $config->set_cache($build_hash, $output_hash);
