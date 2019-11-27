@@ -24,11 +24,4 @@ my $rule2 = Snowflake::Rule->new(
     },
 );
 
-my $target = $rule2;
-my $sources_hash = $target->get_sources_hash();
-my $build_hash   = $target->get_build_hash($config);
-my $output_hash  = $target->get_output_hash($config);
-
-CORE::say "Sources hash: $sources_hash";
-CORE::say "Build hash:   $build_hash";
-CORE::say "Output hash:  $output_hash";
+$rule2->get_output_hash($config);
