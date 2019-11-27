@@ -7,6 +7,7 @@ use Carp qw(confess croak);
 use File::Basename qw(dirname);
 use File::Path qw(mkpath rmtree);
 use Snowflake::Hash qw(build_hash output_hash sources_hash);
+use Snowflake::Log;
 
 # Utility subroutine used for in-memory caching of hashes.
 sub ensure
@@ -19,9 +20,13 @@ sub ensure
     }
 }
 
-=head2 Snowflake::Rule->new(\@dependencies, \%sources)
+=head2 Snowflake::Rule->new($name, \@dependencies, \%sources)
 
-Create a rule with the given dependencies and sources.
+Create a rule with the given name, dependencies and sources.
+
+The name is informative; it has no influence on any hashes or behavior of the
+build system. Multiple rules may use the same name, although this is not
+recommended as it is confusing.
 
 Each dependency must be given as another rule. The order of dependencies is
 significant; specifying them in a different order will give a rule with a
@@ -43,9 +48,11 @@ forms:
 sub new
 {
     my $cls          = shift;
+    my $name         = shift;
     my @dependencies = shift->@*;
     my %sources      = shift->%*;
     my $self = {
+        name         => $name,
         dependencies => \@dependencies,
         sources      => \%sources,
     };
@@ -109,13 +116,19 @@ sub build
 
     # Extract configuration and inputs.
     my $rsync_path   = $ENV{SNOWFLAKE_RSYNC_PATH};
+    my $name         = $self->{name};
     my $build_hash   = $self->get_build_hash($config);
     my @dependencies = $self->{dependencies}->@*;
     my %sources      = $self->{sources}->%*;
 
     # Check if already cached.
     my $cached = $config->get_cache($build_hash);
-    return $cached if defined($cached);
+    if (defined($cached)) {
+        my $output_path = $config->output_path($cached);
+        Snowflake::Log::success("[CACHED] $name");
+        Snowflake::Log::success("[CACHED] Output: $output_path");
+        return $cached;
+    }
 
     # Compute dependency paths. The order is important: it must be the same
     # order as those in the dependencies array. The build script expects them
@@ -150,13 +163,19 @@ sub build
     }
 
     # Execute build script in scratch directory.
+    Snowflake::Log::info("[BUILD] $name");
     my $bash_path = $ENV{SNOWFLAKE_BASH_PATH};
-    system($bash_path, '-c', <<'BASH', '--', $scratch_path, @dependency_paths)
+    my $exit_status = system($bash_path, '-c', <<'BASH', '--', $scratch_path, @dependency_paths);
         set -o errexit
         cd "$1"
         exec ./snowflake-build "${@:2}" < /dev/null 2>&1 > snowflake-log
 BASH
-        and croak('snowflake-build');
+    if ($exit_status != 0) {
+        Snowflake::Log::error("[FAILED] $name");
+        Snowflake::Log::error("[FAILED] Status: $exit_status");
+        Snowflake::Log::error("[FAILED] Logs: $scratch_path/snowflake-log");
+        croak('snowflake-build');
+    }
 
     # Copy output to stash.
     my $scratch_output_path = "$scratch_path/snowflake-output";
@@ -168,6 +187,9 @@ BASH
 
     # Add cache entry.
     $config->set_cache($build_hash, $output_hash);
+
+    Snowflake::Log::success("[SUCCESS] $name");
+    Snowflake::Log::success("[SUCCESS] Output: $output_path");
 
     # Return hash of output.
     $output_hash;
