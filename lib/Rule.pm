@@ -154,7 +154,7 @@ sub build
     system($bash_path, '-c', <<'BASH', '--', $scratch_path, @dependency_paths)
         set -o errexit
         cd "$1"
-        exec ./snowflake-build "${@:2}"
+        exec ./snowflake-build "${@:2}" < /dev/null 2>&1 > snowflake-log
 BASH
         and croak('snowflake-build');
 
