@@ -4,9 +4,9 @@ use warnings;
 use Snowflake::Rule;
 
 my $compile_hello = Snowflake::Rule->new(
-    'Compile hello.c',
-    [],
-    {
+    name => 'Compile hello.c',
+    dependencies => [],
+    sources => {
         'snowflake-build' => ['inline', "#!/usr/bin/env bash\n". <<'BASH'],
             set -o errexit
             mkdir snowflake-output
@@ -18,9 +18,9 @@ BASH
 );
 
 my $compile_main = Snowflake::Rule->new(
-    'Compile main.c',
-    [],
-    {
+    name => 'Compile main.c',
+    dependencies => [],
+    sources => {
         'snowflake-build' => ['inline', "#!/usr/bin/env bash\n" . <<'BASH'],
             set -o errexit
             mkdir snowflake-output
@@ -32,9 +32,9 @@ BASH
 );
 
 my $link = Snowflake::Rule->new(
-    'Link',
-    [$compile_hello, $compile_main],
-    {
+    name => 'Link',
+    dependencies => [$compile_hello, $compile_main],
+    sources => {
         'snowflake-build' => ['inline', "#!/usr/bin/env bash\n" . <<'BASH'],
             set -o errexit
             mkdir snowflake-output

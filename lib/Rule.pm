@@ -48,9 +48,10 @@ forms:
 sub new
 {
     my $cls          = shift;
-    my $name         = shift;
-    my @dependencies = shift->@*;
-    my %sources      = shift->%*;
+    my %options      = @_;
+    my $name         = $options{name};
+    my @dependencies = $options{dependencies}->@*;
+    my %sources      = $options{sources}->%*;
     my $self = {
         name         => $name,
         dependencies => \@dependencies,
