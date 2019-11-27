@@ -170,7 +170,7 @@ sub build
     my $exit_status = system($bash_path, '-c', <<'BASH', '--', $scratch_path, @dependency_paths);
         set -o errexit
         cd "$1"
-        exec ./snowflake-build "${@:2}" < /dev/null 2>&1 > snowflake-log
+        exec ./snowflake-build "${@:2}" </dev/null >snowflake-log 2>&1
 BASH
     if ($exit_status != 0) {
         Snowflake::Log::error("[FAILED] $name");
