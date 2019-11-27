@@ -1,3 +1,5 @@
+use v5.10;
+
 use strict;
 use warnings;
 
@@ -11,12 +13,16 @@ if (@ARGV != 1) {
 }
 my $rules_file = File::Spec->rel2abs($ARGV[0]);
 
-my @rules = do $rules_file;
-if (@rules == 0) {
+my %artifacts = do $rules_file;
+if (keys(%artifacts) == 0) {
     if ($@ ne '') { croak($@); }
     if ($! ne '') { croak($!); }
     croak('Unknown error');
 }
 
 my $config = Snowflake::Config->new(stash_path => 'build');
-$_->get_output_hash($config) for @rules;
+for my $alias (keys(%artifacts)) {
+    my $rule = $artifacts{$alias};
+    my $output_hash = $rule->get_output_hash($config);
+    $config->set_artifact($alias, $output_hash);
+}

@@ -83,4 +83,24 @@ sub get_cache
     }
 }
 
+=head2 $config->set_artifact($alias, $output_hash)
+
+Remember the output with the given output hash as the given alias. Aliases
+are not used by the build system, but provide ergonomic use of outputs by
+users.
+
+=cut
+
+sub set_artifact
+{
+    my ($self, $alias, $output_hash) = @_;
+    my $stash_path = $self->stash_path;
+    mkpath("$stash_path/artifact");
+    unlink("$stash_path/artifact/$alias")
+        or do { confess($!) unless $!{ENOENT} };
+    symlink("../output/$output_hash", "$stash_path/artifact/$alias")
+        or confess($!);
+    undef;
+}
+
 1;

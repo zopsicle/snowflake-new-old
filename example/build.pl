@@ -43,4 +43,4 @@ BASH
     },
 );
 
-$link;
+hello => $link;
