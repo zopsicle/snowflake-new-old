@@ -1,4 +1,10 @@
 {stdenvNoCC, makeWrapper, bash, coreutils, nix, perl}:
+let
+    perlWithPackages = perl.withPackages (p: [
+        p.DBDSQLite
+        p.DBI
+    ]);
+in
 stdenvNoCC.mkDerivation rec {
     name = "snowflake-${version}";
     version = "0.0.0";
@@ -15,11 +21,11 @@ stdenvNoCC.mkDerivation rec {
 
     installPhase = ''
         mkdir --parents $out/bin
-        makeWrapper ${perl}/bin/perl $out/bin/snowflake \
+        makeWrapper ${perlWithPackages}/bin/perl $out/bin/snowflake \
             --set SNOWFLAKE_BASH_PATH     ${bash}/bin/bash \
             --set SNOWFLAKE_CP_PATH       ${coreutils}/bin/cp \
             --set SNOWFLAKE_NIX_HASH_PATH ${nix}/bin/nix-hash \
-            --set PERL5LIB $out/share/lib \
+            --set SNOWFLAKE_LIB_PATH      $out/share/lib \
             --add-flags $out/share/bin/snowflake.pl
     '';
 }

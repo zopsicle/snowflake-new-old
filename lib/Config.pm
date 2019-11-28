@@ -4,12 +4,73 @@ use strict;
 use warnings;
 
 use Carp qw(confess);
+use DBI;
 use Errno qw(EEXIST ENOENT);
 use File::Path qw(mkpath);
 
-use Class::Struct (
-    stash_path => '$',
-);
+sub new
+{
+    my ($cls, $stash_path) = @_;
+    my $stats_database = open_stats_database($stash_path);
+    my $self = {
+        stash_path => $stash_path,
+        stats_database => $stats_database,
+    };
+    bless($self, $cls);
+}
+
+sub open_stats_database
+{
+    my ($stash_path) = @_;
+
+    mkpath($stash_path);
+    my $dbi = DBI->connect("dbi:SQLite:dbname=$stash_path/stats.sqlite3");
+    $dbi->{PrintError} = 0;
+    $dbi->{RaiseError} = 1;
+
+    $dbi->do(<<'SQL');
+        CREATE TABLE IF NOT EXISTS builds (
+            id              INTEGER     NOT NULL,
+            rule_name       BLOB        NOT NULL,
+            build_hash      TEXT        NOT NULL,
+            output_hash     TEXT,
+            started         REAL        NOT NULL,
+            duration        REAL,
+            outcome         INTEGER     NOT NULL,
+            PRIMARY KEY (id)
+        )
+SQL
+
+    $dbi->do(<<'SQL');
+        CREATE INDEX IF NOT EXISTS builds_rule_name
+            ON builds (rule_name)
+SQL
+
+    $dbi->do(<<'SQL');
+        CREATE INDEX IF NOT EXISTS builds_started
+            ON builds (started)
+SQL
+
+    $dbi;
+}
+
+=head2 $config->record_build($rule_name, $build_hash, $output_hash, $started, $duration, $outcome)
+
+Record the start of a build in the stats database.
+
+=cut
+
+sub record_build
+{
+    my $self   = shift;
+    my @fields = @_;
+    $self->{stats_database}->do(<<'SQL', {}, @fields);
+        INSERT INTO builds (rule_name, build_hash, output_hash,
+                            started, duration, outcome)
+        VALUES (?, ?, ?, ?, ?, ?)
+SQL
+    $self->{stats_database}->sqlite_last_insert_rowid;
+}
 
 =head2 $config->scratch_path($build_hash)
 
@@ -24,7 +85,7 @@ file; in fact it does no I/O at all.
 sub scratch_path
 {
     my ($self, $build_hash) = @_;
-    my $stash_path = $self->stash_path;
+    my $stash_path = $self->{stash_path};
     "$stash_path/scratch/$build_hash";
 }
 
@@ -40,7 +101,7 @@ file; in fact it does no I/O at all.
 sub output_path
 {
     my ($self, $output_hash) = @_;
-    my $stash_path = $self->stash_path;
+    my $stash_path = $self->{stash_path};
     "$stash_path/output/$output_hash";
 }
 
@@ -55,7 +116,7 @@ system.
 sub set_cache
 {
     my ($self, $build_hash, $output_hash) = @_;
-    my $stash_path = $self->stash_path;
+    my $stash_path = $self->{stash_path};
     mkpath("$stash_path/cache");
     symlink("../output/$output_hash", "$stash_path/cache/$build_hash")
         or do { confess("symlink: $!") unless $!{EEXIST} };
@@ -72,7 +133,7 @@ entry exists.
 sub get_cache
 {
     my ($self, $build_hash) = @_;
-    my $stash_path = $self->stash_path;
+    my $stash_path = $self->{stash_path};
     my $path = readlink("$stash_path/cache/$build_hash");
     if (defined($path)) {
         $path =~ s#^\.\./output/##r;
@@ -94,7 +155,7 @@ users.
 sub set_artifact
 {
     my ($self, $alias, $output_hash) = @_;
-    my $stash_path = $self->stash_path;
+    my $stash_path = $self->{stash_path};
     mkpath("$stash_path/artifact");
     unlink("$stash_path/artifact/$alias")
         or do { confess("unlink: $!") unless $!{ENOENT} };

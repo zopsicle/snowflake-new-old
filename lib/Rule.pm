@@ -128,6 +128,7 @@ sub build
     # Check if already cached.
     my $cached = $config->get_cache($build_hash);
     if (defined($cached)) {
+        $config->record_build($name, $build_hash, $cached, time(), undef, 0);
         my $output_path = $config->output_path($cached);
         Snowflake::Log::success("[CACHED] $name");
         Snowflake::Log::success("[CACHED] Output: $output_path");
@@ -171,13 +172,15 @@ sub build
     Snowflake::Log::info("[BUILD] $name");
     my $bash_path = $ENV{SNOWFLAKE_BASH_PATH};
     my $time_before = time();
-    my $exit_status = system($bash_path, '-c', <<~'BASH', '--', $scratch_path, @dependency_paths);
+    my $exit_status = system($bash_path, '-c', <<'BASH', '--', $scratch_path, @dependency_paths);
         set -o errexit
         cd "$1"
         exec ./snowflake-build "${@:2}" </dev/null >snowflake-log 2>&1
-        BASH
+BASH
     my $time_after = time();
+    my $duration = $time_after - $time_before;
     if ($exit_status != 0) {
+        $config->record_build($name, $build_hash, undef, $time_before, $duration, 2);
         Snowflake::Log::error("[FAILED] $name");
         Snowflake::Log::error("[FAILED] Status: $exit_status");
         Snowflake::Log::error("[FAILED] Logs: $scratch_path/snowflake-log");
@@ -195,7 +198,7 @@ sub build
     # Add cache entry.
     $config->set_cache($build_hash, $output_hash);
 
-    my $duration = sprintf('%.3f', $time_after - $time_before);
+    $config->record_build($name, $build_hash, $output_hash, $time_before, $duration, 1);
     Snowflake::Log::success("[SUCCESS] $name");
     Snowflake::Log::success("[SUCCESS] Time: $duration s");
     Snowflake::Log::success("[SUCCESS] Output: $output_path");

@@ -2,6 +2,7 @@ use v5.10;
 
 use strict;
 use warnings;
+use lib $ENV{SNOWFLAKE_LIB_PATH};
 
 use Carp qw(confess);
 use File::Spec;
@@ -21,7 +22,7 @@ if (keys(%artifacts) == 0) {
     exit(1);
 }
 
-my $config = Snowflake::Config->new(stash_path => 'build');
+my $config = Snowflake::Config->new('build');
 for my $alias (keys(%artifacts)) {
     my $rule = $artifacts{$alias};
     my $output_hash = $rule->get_output_hash($config);
