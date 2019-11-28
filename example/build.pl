@@ -64,4 +64,4 @@ my $link = Snowflake::Rule->new(
 # collection of artifacts. Artifacts are made available in the build/artifact
 # directory for the user’s convenience, so they don’t have to worry about
 # cryptographic hashes all the time.
-hello => $link;
+{hello => $link};

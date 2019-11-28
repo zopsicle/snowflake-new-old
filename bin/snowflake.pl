@@ -14,14 +14,14 @@ if (@ARGV != 1) {
 }
 my $rules_file = File::Spec->rel2abs($ARGV[0]);
 
-my %artifacts = do $rules_file;
-if (keys(%artifacts) == 0) {
-    if ($@ ne '') { confess("do: $@"); }
-    if ($! ne '') { confess("do: $!"); }
-    say STDERR 'Rules file did not return artifacts.';
-    exit(1);
+my $artifacts = do $rules_file;
+unless (defined($artifacts)) {
+    confess("do: $@") if $@ ne '';
+    confess("do: $!") if $! ne '';
+    confess('do: unknown error');
 }
 
+my %artifacts = $artifacts->%*;
 my $config = Snowflake::Config->new('build');
 for my $alias (keys(%artifacts)) {
     my $rule = $artifacts{$alias};
