@@ -3,7 +3,7 @@ package Snowflake::Rule;
 use strict;
 use warnings;
 
-use Carp qw(confess);
+use Carp qw(confess croak);
 use Errno qw(ENOTEMPTY);
 use File::Basename qw(dirname);
 use File::Path qw(mkpath rmtree);
@@ -184,7 +184,12 @@ BASH
         Snowflake::Log::error("[FAILED] $name");
         Snowflake::Log::error("[FAILED] Status: $exit_status");
         Snowflake::Log::error("[FAILED] Logs: $scratch_path/snowflake-log");
-        confess('snowflake-build');
+        open(my $log, '<', "$scratch_path/snowflake-log");
+        while (<$log>) {
+            chomp;
+            Snowflake::Log::error("[FAILED] $_");
+        }
+        croak('snowflake-build');
     }
 
     # Copy output to stash.
