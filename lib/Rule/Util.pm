@@ -41,3 +41,5 @@ sub bash_strict
     my ($source) = @_;
     bash("set -euo pipefail\n$source");
 }
+
+1;
