@@ -9,6 +9,7 @@ use File::Basename qw(dirname);
 use File::Path qw(mkpath rmtree);
 use Snowflake::Hash qw(build_hash output_hash sources_hash);
 use Snowflake::Log;
+use Time::HiRes qw(time);
 
 # Utility subroutine used for in-memory caching of hashes.
 sub ensure
@@ -169,11 +170,13 @@ sub build
     # Execute build script in scratch directory.
     Snowflake::Log::info("[BUILD] $name");
     my $bash_path = $ENV{SNOWFLAKE_BASH_PATH};
+    my $time_before = time();
     my $exit_status = system($bash_path, '-c', <<~'BASH', '--', $scratch_path, @dependency_paths);
         set -o errexit
         cd "$1"
         exec ./snowflake-build "${@:2}" </dev/null >snowflake-log 2>&1
         BASH
+    my $time_after = time();
     if ($exit_status != 0) {
         Snowflake::Log::error("[FAILED] $name");
         Snowflake::Log::error("[FAILED] Status: $exit_status");
@@ -192,7 +195,9 @@ sub build
     # Add cache entry.
     $config->set_cache($build_hash, $output_hash);
 
+    my $duration = sprintf('%.3f', $time_after - $time_before);
     Snowflake::Log::success("[SUCCESS] $name");
+    Snowflake::Log::success("[SUCCESS] Time: $duration s");
     Snowflake::Log::success("[SUCCESS] Output: $output_path");
 
     # Return hash of output.
