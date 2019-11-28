@@ -3,8 +3,9 @@
 use strict;
 use warnings;
 
-# Import the module that allows us to define rules.
+# Import the modules that allow us to define rules.
 use Snowflake::Rule;
+use Snowflake::Rule::Util qw(bash_strict);
 
 # A rule describes how to build something.
 my $compile_hello = Snowflake::Rule->new(
@@ -22,9 +23,7 @@ my $compile_hello = Snowflake::Rule->new(
     sources => {
         # The file named snowflake-build is special: it is the build script
         # that actually builds things.
-        'snowflake-build' => ['inline', "#!/usr/bin/env bash\n" . <<'BASH'],
-            set -o errexit
-
+        'snowflake-build' => bash_strict(<<'BASH'),
             # The build script must place its output in the file named
             # snowflake_output. This is typically a directory, but it does not
             # have to be one.
@@ -42,8 +41,7 @@ my $compile_main = Snowflake::Rule->new(
     name => 'Compile main.c',
     dependencies => [],
     sources => {
-        'snowflake-build' => ['inline', "#!/usr/bin/env bash\n" . <<'BASH'],
-            set -o errexit
+        'snowflake-build' => bash_strict(<<'BASH'),
             mkdir snowflake-output
             gcc -o snowflake-output/main.o -c main.c
 BASH
@@ -56,8 +54,7 @@ my $link = Snowflake::Rule->new(
     name => 'Link',
     dependencies => [$compile_hello, $compile_main],
     sources => {
-        'snowflake-build' => ['inline', "#!/usr/bin/env bash\n" . <<'BASH'],
-            set -o errexit
+        'snowflake-build' => bash_strict(<<'BASH'),
             gcc -o snowflake-output $1/hello.o $2/main.o
 BASH
     },
