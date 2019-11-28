@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Carp qw(confess croak);
+use Errno qw(ENOTEMPTY);
 use File::Basename qw(dirname);
 use File::Path qw(mkpath rmtree);
 use Snowflake::Hash qw(build_hash output_hash sources_hash);
@@ -185,8 +186,8 @@ BASH
     my $output_hash = output_hash($scratch_output_path);
     my $output_path = $config->output_path($output_hash);
     mkpath(dirname($output_path));
-    system($cp_path, @cp_flags, $scratch_output_path, $output_path)
-        and croak('cp');
+    rename($scratch_output_path, $output_path)
+        or do { croak($!) unless $!{ENOTEMPTY}; };
 
     # Add cache entry.
     $config->set_cache($build_hash, $output_hash);
