@@ -130,8 +130,8 @@ sub build
     if (defined($cached)) {
         $config->record_build($name, $build_hash, $cached, time(), undef, 0);
         my $output_path = $config->output_path($cached);
-        Snowflake::Log::success("[CACHED] $name");
-        Snowflake::Log::success("[CACHED] Output: $output_path");
+        Snowflake::Log::info("[CACHED] $name");
+        Snowflake::Log::info("         Output: $output_path");
         return $cached;
     }
 
@@ -169,7 +169,6 @@ sub build
     }
 
     # Execute build script in scratch directory.
-    Snowflake::Log::info("[BUILD] $name");
     my $bash_path = $ENV{SNOWFLAKE_BASH_PATH};
     my $time_before = time();
     my $exit_status = system($bash_path, '-c', <<'BASH', '--', $scratch_path, @dependency_paths);
@@ -182,12 +181,12 @@ BASH
     if ($exit_status != 0) {
         $config->record_build($name, $build_hash, undef, $time_before, $duration, 2);
         Snowflake::Log::error("[FAILED] $name");
-        Snowflake::Log::error("[FAILED] Status: $exit_status");
-        Snowflake::Log::error("[FAILED] Logs: $scratch_path/snowflake-log");
+        Snowflake::Log::error("         Status: $exit_status");
+        Snowflake::Log::error("         Logs: $scratch_path/snowflake-log");
         open(my $log, '<', "$scratch_path/snowflake-log");
         while (<$log>) {
             chomp;
-            Snowflake::Log::error("[FAILED] $_");
+            Snowflake::Log::error("         $_");
         }
         croak('snowflake-build');
     }
@@ -205,8 +204,8 @@ BASH
 
     $config->record_build($name, $build_hash, $output_hash, $time_before, $duration, 1);
     Snowflake::Log::success("[SUCCESS] $name");
-    Snowflake::Log::success("[SUCCESS] Time: $duration s");
-    Snowflake::Log::success("[SUCCESS] Output: $output_path");
+    Snowflake::Log::success("          Time: $duration s");
+    Snowflake::Log::success("          Output: $output_path");
 
     # Return hash of output.
     $output_hash;
