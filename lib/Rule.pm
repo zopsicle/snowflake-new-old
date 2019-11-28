@@ -169,11 +169,11 @@ sub build
     # Execute build script in scratch directory.
     Snowflake::Log::info("[BUILD] $name");
     my $bash_path = $ENV{SNOWFLAKE_BASH_PATH};
-    my $exit_status = system($bash_path, '-c', <<'BASH', '--', $scratch_path, @dependency_paths);
+    my $exit_status = system($bash_path, '-c', <<~'BASH', '--', $scratch_path, @dependency_paths);
         set -o errexit
         cd "$1"
         exec ./snowflake-build "${@:2}" </dev/null >snowflake-log 2>&1
-BASH
+        BASH
     if ($exit_status != 0) {
         Snowflake::Log::error("[FAILED] $name");
         Snowflake::Log::error("[FAILED] Status: $exit_status");

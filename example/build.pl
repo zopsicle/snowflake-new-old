@@ -23,14 +23,14 @@ my $compile_hello = Snowflake::Rule->new(
     sources => {
         # The file named snowflake-build is special: it is the build script
         # that actually builds things.
-        'snowflake-build' => bash_strict(<<'BASH'),
+        'snowflake-build' => bash_strict(<<~'BASH'),
             # The build script must place its output in the file named
             # snowflake_output. This is typically a directory, but it does not
             # have to be one.
             mkdir snowflake-output
 
             gcc -o snowflake-output/hello.o -c hello.c
-BASH
+            BASH
         # Source files are passed in as well.
         'hello.h' => ['on_disk', 'example/hello.h'],
         'hello.c' => ['on_disk', 'example/hello.c'],
@@ -41,10 +41,10 @@ my $compile_main = Snowflake::Rule->new(
     name => 'Compile main.c',
     dependencies => [],
     sources => {
-        'snowflake-build' => bash_strict(<<'BASH'),
+        'snowflake-build' => bash_strict(<<~'BASH'),
             mkdir snowflake-output
             gcc -o snowflake-output/main.o -c main.c
-BASH
+            BASH
         'hello.h' => ['on_disk', 'example/hello.h'],
         'main.c' => ['on_disk', 'example/main.c'],
     },
@@ -54,9 +54,9 @@ my $link = Snowflake::Rule->new(
     name => 'Link',
     dependencies => [$compile_hello, $compile_main],
     sources => {
-        'snowflake-build' => bash_strict(<<'BASH'),
+        'snowflake-build' => bash_strict(<<~'BASH'),
             gcc -o snowflake-output $1/hello.o $2/main.o
-BASH
+            BASH
     },
 );
 

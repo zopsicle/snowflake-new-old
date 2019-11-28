@@ -17,9 +17,9 @@ Figure 1:
 
     Snowflake::Rule->new('Build main.c', [], {
         'main.c' => ['on_disk', 'main.c'],
-        'snowflake-build' => bash(<<'BASH'),
+        'snowflake-build' => bash(<<~'BASH'),
             gcc -c main.c -o snowflake-output
-BASH
+            BASH
     });
 
 =cut
