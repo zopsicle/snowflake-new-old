@@ -68,7 +68,7 @@ sub mercury_module
         sources => {
             'NAME'            => ['inline', $name],
             "$name.m"         => ['on_disk', $source],
-            'snowflake-build' => bash_strict(<<~'BASH'),
+            'snowflake-build' => bash_strict(<<'BASH'),
                 name=$(< NAME)
 
                 # Make sure mmc can find the interface files.
@@ -92,7 +92,7 @@ sub mercury_module
                         mv "$int_file" snowflake-output
                     fi
                 done
-                BASH
+BASH
         },
     );
 
@@ -102,7 +102,7 @@ sub mercury_module
         sources => {
             'NAME'            => ['inline', $name],
             "$name.m"         => ['on_disk', $source],
-            'snowflake-build' => bash_strict(<<~'BASH'),
+            'snowflake-build' => bash_strict(<<'BASH'),
                 name=$(< NAME)
 
                 # Make sure mmc can find the interface files.
@@ -119,7 +119,7 @@ sub mercury_module
                 # Expose the init file and the object file.
                 mkdir snowflake-output
                 mv "$name".{c,o} snowflake-output
-                BASH
+BASH
         },
     );
 
@@ -147,7 +147,7 @@ sub mercury_executable
         dependencies => [map { $_->{implementation} } @modules],
         sources => {
             'NAME'            => ['inline', $name],
-            'snowflake-build' => bash_strict(<<~'BASH'),
+            'snowflake-build' => bash_strict(<<'BASH'),
                 name=$(< NAME)
 
                 # Generate the arguments to c2init and ml.
@@ -166,7 +166,7 @@ sub mercury_executable
                 # Expose the executable.
                 mkdir snowflake-output
                 mv "$name" snowflake-output
-                BASH
+BASH
         },
     );
 }

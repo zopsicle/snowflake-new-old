@@ -15,11 +15,12 @@ inline, as in figure 1.
 
 Figure 1:
 
-    Snowflake::Rule->new('Build main.c', [], {
+    my $rule = Snowflake::Rule->new('Build main.c', [], {
         'main.c' => ['on_disk', 'main.c'],
-        'snowflake-build' => bash(<<~'BASH'),
-            gcc -c main.c -o snowflake-output
-            BASH
+        'snowflake-build' => bash(<<'BASH'),
+            gcc -c main.c
+            mv main.o snowflake-output
+    BASH
     });
 
 =cut
