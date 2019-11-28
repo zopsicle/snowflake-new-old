@@ -58,7 +58,7 @@ sub set_cache
     my $stash_path = $self->stash_path;
     mkpath("$stash_path/cache");
     symlink("../output/$output_hash", "$stash_path/cache/$build_hash")
-        or do { confess($!) unless $!{EEXIST} };
+        or do { confess("symlink: $!") unless $!{EEXIST} };
     undef;
 }
 
@@ -79,7 +79,7 @@ sub get_cache
     } elsif ($!{ENOENT}) {
         undef;
     } else {
-        confess($!);
+        confess("readlink: $!");
     }
 }
 
@@ -97,9 +97,9 @@ sub set_artifact
     my $stash_path = $self->stash_path;
     mkpath("$stash_path/artifact");
     unlink("$stash_path/artifact/$alias")
-        or do { confess($!) unless $!{ENOENT} };
+        or do { confess("unlink: $!") unless $!{ENOENT} };
     symlink("../output/$output_hash", "$stash_path/artifact/$alias")
-        or confess($!);
+        or confess("symlink: $!");
     undef;
 }
 

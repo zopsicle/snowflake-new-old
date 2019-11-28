@@ -15,7 +15,7 @@ package Snowflake::Hash;
 use strict;
 use warnings;
 
-use Carp qw(confess croak);
+use Carp qw(confess);
 use Digest::SHA qw(sha256_hex);
 use Exporter qw(import);
 
@@ -34,13 +34,13 @@ sub hash_file
     my ($path) = @_;
     my $nix_hash_path = $ENV{SNOWFLAKE_NIX_HASH_PATH};
     open(my $stdout, '-|', $nix_hash_path, '--type', 'sha256', $path)
-        or confess($!);
+        or confess("open: $!");
     my $line = <$stdout>;
     if (defined($line)) {
         chomp($line);
         $line;
     } else {
-        croak('nix-hash');
+        confess('nix-hash');
     }
 }
 
@@ -62,7 +62,7 @@ sub sources_hash
         } elsif ($type eq 'on_disk') {
             $hash->add(hash_file($source));
         } else {
-            croak("Bad source type: $type");
+            confess("Bad source type: $type");
         }
     }
     $hash->hexdigest;

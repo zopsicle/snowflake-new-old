@@ -3,7 +3,7 @@ package Snowflake::Rule;
 use strict;
 use warnings;
 
-use Carp qw(confess croak);
+use Carp qw(confess);
 use Errno qw(ENOTEMPTY);
 use File::Basename qw(dirname);
 use File::Path qw(mkpath rmtree);
@@ -154,15 +154,15 @@ sub build
         my ($type, $source) = $sources{$name}->@*;
         if ($type eq 'inline') {
             mkpath(dirname($path));
-            open(my $file, '>', $path) or confess($!);
-            print $file $source or confess($!);
+            open(my $file, '>', $path) or confess("open: $!");
+            print $file $source or confess("write: $!");
             chmod(0755, $path) if ($name eq 'snowflake-build');
         } elsif ($type eq 'on_disk') {
             mkpath(dirname($path));
             system($cp_path, @cp_flags, $source, $path)
-                and croak('cp');
+                and confess('cp');
         } else {
-            croak("Bad source type: $type");
+            confess("Bad source type: $type");
         }
     }
 
@@ -178,7 +178,7 @@ BASH
         Snowflake::Log::error("[FAILED] $name");
         Snowflake::Log::error("[FAILED] Status: $exit_status");
         Snowflake::Log::error("[FAILED] Logs: $scratch_path/snowflake-log");
-        croak('snowflake-build');
+        confess('snowflake-build');
     }
 
     # Copy output to stash.
@@ -187,7 +187,7 @@ BASH
     my $output_path = $config->output_path($output_hash);
     mkpath(dirname($output_path));
     rename($scratch_output_path, $output_path)
-        or do { croak($!) unless $!{ENOTEMPTY}; };
+        or do { confess("rename: $!") unless $!{ENOTEMPTY}; };
 
     # Add cache entry.
     $config->set_cache($build_hash, $output_hash);

@@ -3,7 +3,7 @@ use v5.10;
 use strict;
 use warnings;
 
-use Carp qw(croak);
+use Carp qw(confess);
 use File::Spec;
 use Snowflake::Config;
 
@@ -15,9 +15,10 @@ my $rules_file = File::Spec->rel2abs($ARGV[0]);
 
 my %artifacts = do $rules_file;
 if (keys(%artifacts) == 0) {
-    if ($@ ne '') { croak($@); }
-    if ($! ne '') { croak($!); }
-    croak('Unknown error');
+    if ($@ ne '') { confess("do: $@"); }
+    if ($! ne '') { confess("do: $!"); }
+    say STDERR 'Rules file did not return artifacts.';
+    exit(1);
 }
 
 my $config = Snowflake::Config->new(stash_path => 'build');
