@@ -18,7 +18,6 @@ use warnings;
 use Carp qw(confess);
 use Digest::SHA qw(sha256_hex);
 use Exporter qw(import);
-use Fcntl qw(:mode);
 
 our @EXPORT_OK = qw(build_hash hash_file output_hash sources_hash);
 
@@ -33,48 +32,16 @@ traversed.
 sub hash_file
 {
     my ($path) = @_;
-    my $digest = Digest::SHA->new('sha256');
-    hash_file_inner($path, $digest);
-    $digest->hexdigest;
-}
-
-sub hash_file_inner
-{
-    my ($path, $digest) = @_;
-
-    my @stat = stat($path);
-    confess("stat: $!") unless @stat;
-    my $mode = $stat[2];
-
-    if (S_ISREG($mode)) {
-        $digest->add('' . $mode);
-        my $buffer;
-        open(my $file, '<:raw', $path) // confess("open: $!");
-        for (;;) {
-            my $nread = read($file, $buffer, 4096) // confess("read: $!");
-            last if $nread == 0;
-            $digest->add(substr($buffer, 0, $nread));
-        }
-        return;
+    my $nix_hash_path = $ENV{SNOWFLAKE_NIX_HASH_PATH};
+    open(my $stdout, '-|', $nix_hash_path, '--type', 'sha256', $path)
+        or confess("open: $!");
+    my $line = <$stdout>;
+    if (defined($line)) {
+        chomp($line);
+        $line;
+    } else {
+        confess('nix-hash');
     }
-
-    if (S_ISLNK($mode)) {
-        my $target = readlink($path) // confess("readlink: $!");
-        $digest->add($target);
-        return;
-    }
-
-    if (S_ISDIR($mode)) {
-        opendir(my $dir, $path) or confess("opendir: $!");
-        my @files = sort(grep { $_ ne '.' && $_ ne '..' } readdir($dir));
-        for my $file (@files) {
-            $digest->add($file);
-            hash_file_inner("$path/$file", $digest);
-        }
-        return;
-    }
-
-    confess('Can only hash regular file, symbolic link, or directory');
 }
 
 =head2 sources_hash(%sources)
