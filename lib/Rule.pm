@@ -34,7 +34,7 @@ Each dependency must be given as another rule. The order of dependencies is
 significant; specifying them in a different order will give a rule with a
 different build hash.
 
-Each source must be given as an array reference of one of the following two
+Each source must be given as an array reference of one of the following three
 forms:
 
     # An inline source; a regular file that will appear in the scratch
@@ -44,6 +44,10 @@ forms:
     # A path to a file relative to the directory the build system was invoked
     # from. The file will be copied to the scratch directory.
     ['on_disk', '«path»']
+
+    # Just like on_disk, but create a hard link instead of a copy.
+    # This is much more efficient but also more dangerous!
+    ['on_disk_link', '«path»']
 
 =cut
 
@@ -118,12 +122,13 @@ sub build
     my ($self, $config) = @_;
 
     # Extract configuration and inputs.
-    my $cp_path      = $ENV{SNOWFLAKE_CP_PATH};
-    my @cp_flags     = ('--no-target-directory', '--recursive');
-    my $name         = $self->{name};
-    my $build_hash   = $self->get_build_hash($config);
-    my @dependencies = $self->{dependencies}->@*;
-    my %sources      = $self->{sources}->%*;
+    my $cp_path       = $ENV{SNOWFLAKE_CP_PATH};
+    my @cp_flags      = ('--no-target-directory', '--recursive');
+    my @cp_flags_link = (@cp_flags, '--link');
+    my $name          = $self->{name};
+    my $build_hash    = $self->get_build_hash($config);
+    my @dependencies  = $self->{dependencies}->@*;
+    my %sources       = $self->{sources}->%*;
 
     # Check if already cached.
     my $cached = $config->get_cache($build_hash);
@@ -162,6 +167,10 @@ sub build
         } elsif ($type eq 'on_disk') {
             mkpath(dirname($path));
             system($cp_path, @cp_flags, $source, $path)
+                and confess('cp');
+        } elsif ($type eq 'on_disk_link') {
+            mkpath(dirname($path));
+            system($cp_path, @cp_flags_link, $source, $path)
                 and confess('cp');
         } else {
             confess("Bad source type: $type");

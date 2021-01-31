@@ -61,6 +61,8 @@ sub sources_hash
             $hash->add($source);
         } elsif ($type eq 'on_disk') {
             $hash->add(hash_file($source));
+        } elsif ($type eq 'on_disk_link') {
+            $hash->add(hash_file($source));
         } else {
             confess("Bad source type: $type");
         }
