@@ -18,6 +18,7 @@ use warnings;
 use Carp qw(confess);
 use Digest::SHA qw(sha256_hex);
 use Exporter qw(import);
+use Fcntl qw(:mode);
 
 our @EXPORT_OK = qw(build_hash hash_file output_hash sources_hash);
 
@@ -32,16 +33,50 @@ traversed.
 sub hash_file
 {
     my ($path) = @_;
-    my $nix_hash_path = $ENV{SNOWFLAKE_NIX_HASH_PATH};
-    open(my $stdout, '-|', $nix_hash_path, '--type', 'sha256', $path)
-        or confess("open: $!");
-    my $line = <$stdout>;
-    if (defined($line)) {
-        chomp($line);
-        $line;
-    } else {
-        confess('nix-hash');
+    my $hash = Digest::SHA->new('sha256');
+    do_hash_file($path, $hash);
+    $hash->hexdigest;
+}
+
+sub do_hash_file
+{
+    my ($path, $hash) = @_;
+
+    my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size,
+        $atime, $mtime, $ctime, $blksize, $blocks) = stat($path);
+
+    if (S_ISREG($mode)) {
+        $hash->add('F', $mode & 0777, "\0", $size, "\0");
+        $hash->addfile($path);
+        return;
     }
+
+    if (S_ISDIR($mode)) {
+        $hash->add('D', $mode & 0777, "\0");
+
+        opendir(my $dir, $path) or die("opendir: $!");
+        my @entries = sort(readdir($dir));
+        closedir($dir);
+
+        for (@entries) {
+            next if $_ eq '.';
+            next if $_ eq '..';
+            $hash->add($_, "\0");
+            do_hash_file("$path/$_", $hash);
+        }
+
+        $hash->add("\0");
+
+        return;
+    }
+
+    if (S_ISLNK($mode)) {
+        my $link = readlink($path) // confess("readlink: $!");
+        $hash->add('L', $link, "\0");
+        return;
+    }
+
+    croak("Cannot hash file: $path");
 }
 
 =head2 sources_hash(%sources)
